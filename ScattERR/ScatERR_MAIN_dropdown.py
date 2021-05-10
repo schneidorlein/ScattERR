@@ -12,6 +12,7 @@ from PyQt5.QtWidgets import QApplication as Qapp
 from PyQt5.QtCore import QCoreApplication
 from PyQt5.QtWidgets import QMainWindow as QMain
 from PyQt5 import QtCore
+from PyQt5 import QtGui
 
 pyqt_version = 5
 
@@ -30,6 +31,7 @@ import threading
 import serial
 import configparser
 import glob
+import ctypes
 
 
 #from Backend.Utils import MotorControl
@@ -375,7 +377,7 @@ class MotorControl(object):
     def get_tablestatus(self):
         
             
-        t = threading.Timer(.5, self.get_tablestatus)
+        t = threading.Timer(2, self.get_tablestatus)
         t.start()
             
         MID = 1
@@ -386,29 +388,18 @@ class MotorControl(object):
         self.SState3 = self.serial_query(SID3, 1, 'ASTAT')[0]
             
             
+            
         #if self.MState == 'T' or self.SState2 == 'T' or self.SState3 == 'T':
         cur_pos = self.get_Position()
+        
         GUI.edit_s1_cur_x.setText('{:4.2f}'.format(cur_pos[1])) #s1h
         GUI.edit_s2_cur_x.setText('{:4.2f}'.format(cur_pos[0]))
         GUI.edit_s2_cur_y.setText('{:4.2f}'.format(cur_pos[2]))
-        
-        if self.MState == 'T' or self.SState2 == 'T' or self.SState3 == 'T':
-            GUI.CBoxPARKBEAM_s1.setStyleSheet("QComboBox {color: rgb(255,0,0);padding-left: 30px;}")  
-            GUI.CBoxPARKBEAM_s2.setStyleSheet("QComboBox {color: rgb(255,0,0);padding-left: 30px;}")
-            GUI.button_s2_adjust.setStyleSheet("color: rgb(255,0,0);")
-            GUI.button_in_vitro.setStyleSheet("color: rgb(255,0,0);")
-            GUI.button_in_vivo.setStyleSheet("color: rgb(255,0,0);")
-        
+                
         
         if self.MState == 'R' and self.SState2 == 'R' and self.SState3 == 'R':
             #print('motor stopped')
             t.cancel()
-            
-            GUI.CBoxPARKBEAM_s1.setStyleSheet("QComboBox {color: rgb(0,255,0);padding-left: 30px;}")
-            GUI.CBoxPARKBEAM_s2.setStyleSheet("QComboBox {color: rgb(0,255,0);padding-left: 30px;}")
-            GUI.button_s2_adjust.setStyleSheet("color: rgb(0,255,0);")
-            GUI.button_in_vitro.setStyleSheet("color: rgb(0,255,0);")
-            GUI.button_in_vivo.setStyleSheet("color: rgb(0,255,0);")
         
             
 
@@ -429,30 +420,19 @@ class MainWindow(QMain, Ui_MainWindow):
         self.corr = []
         #Initialize GUI and load stylesheet
         self.setupUi(self)
-        
-        # #park and beam buttons
-        # self.button_s1_park.clicked.connect(self.parkposition_s1)
-        # self.button_s1_beam.clicked.connect(self.beamposition_s1)
-        # self.button_s2_park.clicked.connect(self.parkposition_s2)
-        # self.button_s2_beam.clicked.connect(self.beamposition_s2)
+
+        # park and beam buttons
         # Set up Combo box for positioning mode and connect
-  
-        
+          
         self.CBoxPARKBEAM_s1.addItem('PARK')
         self.CBoxPARKBEAM_s1.addItem('BEAM')
-        
-        self.CBoxPARKBEAM_s1.setStyleSheet("QComboBox {padding-left: 30px;}")
-        # self.CBoxPARKBEAM_s1.setStyleSheet("QComboBox {color: rgb(0,255,0);padding-left: 30px;}")
-        
-        
+    
         self.CBoxPARKBEAM_s1.currentIndexChanged.connect(self.parkposition_s1)
         self.CBoxPARKBEAM_s1.currentIndexChanged.connect(self.beamposition_s1)
         
+        
         self.CBoxPARKBEAM_s2.addItem('PARK')
         self.CBoxPARKBEAM_s2.addItem('BEAM')
-        
-        self.CBoxPARKBEAM_s2.setStyleSheet("QComboBox {padding-left: 30px;}")
-
         
         self.CBoxPARKBEAM_s2.currentIndexChanged.connect(self.parkposition_s2)
         self.CBoxPARKBEAM_s2.currentIndexChanged.connect(self.beamposition_s2)
@@ -464,17 +444,11 @@ class MainWindow(QMain, Ui_MainWindow):
         self.button_in_vivo.clicked.connect(self.vivoposition)
         self.button_in_vitro.clicked.connect(self.vitroposition)
         
-        
-        self.button_load_dcm_image.clicked.connect(self.load_Image)
+        # button for manual movement
+        self.Button_MoveTable.clicked.connect(self.manual_move)
 
-        # try:
-        #     a = 1/0
-
-        # except Exception:
-        #     print('youre dumb')
-        #     return 0
-        
-        
+        # button to load dcm image
+        self.button_load_dcm_image.clicked.connect(self.load_Image)      
         
         
     def parkposition_s1(self):
@@ -503,7 +477,7 @@ class MainWindow(QMain, Ui_MainWindow):
         if position == 'BEAM':
             Motor.mode = 'absolute'
             pos = Motor.get_Position()
-            target = [pos[0], 30, pos[2]]
+            target = [pos[0], 181, pos[2]]
             #print target coordinates
             self.target_coordinates(target)
             #move table to target destination
@@ -539,7 +513,7 @@ class MainWindow(QMain, Ui_MainWindow):
         if position == 'BEAM':
             Motor.mode = 'absolute'
             pos = Motor.get_Position()
-            target = [30, pos[1], 6]
+            target = [181, pos[1], 6]
             #print target coordinates
             self.target_coordinates(target)
             #move table to target destination
@@ -570,6 +544,8 @@ class MainWindow(QMain, Ui_MainWindow):
         target = [0, 0, 0]
         #print target coordinates
         self.target_coordinates(target)
+        #change dropdown button to beam position
+#        GUI.CBoxPARKBEAM_s1.setText('Beam')
         #move table to target destination
         Motor.moveTable(vector=target)
         #get current coordinates
@@ -580,17 +556,27 @@ class MainWindow(QMain, Ui_MainWindow):
     
     def vitroposition(self):
         Motor.mode = 'absolute'
-        target = [30, 30, 6]
+        target = [181, 181, 6]
         #print target coordinates
         self.target_coordinates(target)
         #move table to target destination
-        Motor.moveTable(vector=[30, 30, 6])
+        Motor.moveTable(vector=target)
         #get current coordinates
         Motor.get_tablestatus()
         
         logging.info('\'In vitro\' button for both scatterer pressed. Scatterer are now moving to beam position.')
 
-
+    def manual_move(self):
+        Motor.mode = 'absolute'
+        target = np.array((GUI.SpinBoxTablex_s2.value(),
+                            GUI.SpinBoxTablex_s1.value(),
+                            GUI.SpinBoxTabley_s2.value()))
+        #print target coordinates
+        self.target_coordinates(target)
+        #move table to target destination
+        Motor.moveTable(vector=target)
+        #get current coordinates
+        Motor.get_tablestatus()
 
     def target_coordinates(self, tar):
         
@@ -623,6 +609,9 @@ class MainWindow(QMain, Ui_MainWindow):
         
         self.Display_dcm_image.canvas.axes.set_xlabel("x [px = 0.5 mm]")
         self.Display_dcm_image.canvas.axes.set_ylabel("y [px = 0.5 mm]")
+        xticklabels = [float(x.get_text()) for x in self.Display_dcm_image.canvas.axes.get_xticklabels()]
+        # print(self.Display_dcm_image.canvas.axes.get_xticklabels())
+        self.Display_dcm_image.canvas.axes.set_xticklabels(xticklabels)
         self.Display_dcm_image.canvas.axes.xaxis.label.set_size(18)
         self.Display_dcm_image.canvas.axes.yaxis.label.set_size(18)
         self.Display_dcm_image.canvas.draw()
@@ -708,6 +697,11 @@ if __name__=="__main__":
         app = Qapp(sys.argv)
     else:
         pass
+    
+    # Create App-ID: Otherwise, the software's icon will not display propperly.
+    appid = 'OncoRay.Preclinical.RadiAiDD'  # for TaskManager
+    ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(appid)
+    app.setWindowIcon(QtGui.QIcon('Backend/icon.jpeg'))
     
     # create interface        
     GUI = MainWindow()

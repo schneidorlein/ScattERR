@@ -3,7 +3,7 @@
 block_cipher = None
 
 
-a = Analysis(['ScatERR_MAIN.py'],
+a = Analysis(['ScatERR_Main.py'],
              pathex=['C:\\Users\\Acer\\Documents\\Studium\\MA\\ScattERR'],
              binaries=[],
              datas=[],
@@ -19,19 +19,15 @@ pyz = PYZ(a.pure, a.zipped_data,
              cipher=block_cipher)
 exe = EXE(pyz,
           a.scripts,
+          a.binaries,
+          a.zipfiles,
+          a.datas,
           [],
-          exclude_binaries=True,
-          name='ScatERR_MAIN',
+          name='ScatERR_Main',
           debug=False,
           bootloader_ignore_signals=False,
           strip=False,
           upx=True,
+          upx_exclude=[],
+          runtime_tmpdir=None,
           console=True )
-coll = COLLECT(exe,
-               a.binaries,
-               a.zipfiles,
-               a.datas,
-               strip=False,
-               upx=True,
-               upx_exclude=[],
-               name='ScatERR_MAIN')
