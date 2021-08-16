@@ -30,8 +30,8 @@ class MplCanvas(FigureCanvas):
     def __init__(self):
         self.fig = Figure()                         # create figure
         self.axes = self.fig.add_subplot(111)       # create subplot
-        self.fig.subplots_adjust(left=0.22, bottom=0.18, right=0.97,
-                                 top=0.98,  wspace=0.2, hspace=0.2)
+        self.fig.subplots_adjust(left=0.32, bottom=0.11, right=0.97,
+                                  top=1,  wspace=0, hspace=0)
         self.fig.patch.set_facecolor((0.19, 0.19, 0.19))
  
         FigureCanvas.__init__(self, self.fig)       # initialize canvas

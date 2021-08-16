@@ -4,7 +4,7 @@ QToolTip
      background-color: #ffa02f;
      padding: 1px;
      border-radius: 3px;
-
+     opacity: 100;
 }
 
 QWidget
@@ -84,33 +84,11 @@ QWidget:focus
 
 QLineEdit
 {
-    color: white;
     background-color: QLinearGradient( x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #4d4d4d, stop: 0 #646464, stop: 1 #5d5d5d);
     padding: 1px;
     border-style: solid;
     border: 1px solid #1e1e1e;
     border-radius: 5;
-    color: #b1b1b1;
-}
-
-QLineEdit:disabled 
-{
-    font-weight: bold;
-    color: #b1b1b1;
-}
-
-QGroupBox
-{
-    border: 2px solid rgb(40,40,40);
-    border-radius: 4px;
-    margin-top: 0.7em;
-}
-
-
-QGroupBox::title 
-{
-    subcontrol-origin: margin;
-    left: 10px;
 }
 
 QPushButton
@@ -130,6 +108,12 @@ QPushButton
 QPushButton:pressed
 {
     background-color: QLinearGradient( x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #2d2d2d, stop: 0.1 #2b2b2b, stop: 0.5 #292929, stop: 0.9 #282828, stop: 1 #252525);
+}
+
+QPushButton:checked
+{
+    background-color: QLinearGradient( x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #2d2d2d, stop: 0.1 #2b2b2b, stop: 0.5 #292929, stop: 0.9 #282828, stop: 1 #252525);
+	border: 2px solid QLinearGradient( x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #ffa02f, stop: 1 #d7801a);
 }
 
 QComboBox
@@ -176,23 +160,17 @@ QComboBox::drop-down
 
 QComboBox::down-arrow
 {
-     image: url(./down_arrow.png);
+     image: url(:/down_arrow.png);
 }
 
 QGroupBox:focus
 {
-border: 2px solid black;
+border: 2px solid QLinearGradient( x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #ffa02f, stop: 1 #d7801a);
 }
 
 QTextEdit:focus
 {
     border: 2px solid QLinearGradient( x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #ffa02f, stop: 1 #d7801a);
-}
-
-#Log 
-{
-    color: #b1b1b1;
-    background-color: #323232;
 }
 
 QScrollBar:horizontal {
@@ -292,9 +270,12 @@ QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical
 QTextEdit
 {
     background-color: #242424;
-    color: #b1b1b1;
 }
 
+QToolBox QScrollArea>QWidget>QWidget
+{
+  background-color: QLinearGradient(x1:0, y1:0, x2:0, y2:1, stop:0 #161616, stop: 0.5 #151515, stop: 0.6 #212121, stop:1 #343434);
+}
 
 QToolBox::tab {
     background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
@@ -312,13 +293,6 @@ QToolBox::tab:!selected:hover
     border-top-right-radius: 3px;
     background-color: QLinearGradient(x1:0, y1:0, x2:0, y2:1, stop:1 #212121, stop:0.4 #343434, stop:0.2 #343434, stop:0.1 #ffaa00);
 }
-
-QToolBox::tab:selected
-{
-    color: #ffaa00;
-    background-color: rgb(80,80,80);
-}
-
 
 QPlainTextEdit
 {
@@ -410,12 +384,6 @@ QProgressBar::chunk
     width: 2.15px;
     margin: 0.5px;
 }
-
-/*
-QTabWidget{
-	background-color: #323232;
-}
-*/
 
 QTabBar::tab {
     color: #b1b1b1;

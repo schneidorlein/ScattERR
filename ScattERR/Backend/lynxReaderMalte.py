@@ -341,14 +341,14 @@ class Lynx:
             ax.set_xlabel("x [mm]")
             ax.set_ylabel("y [mm]")
           #  ax.set_title("x = {0:.2f}".format(xsc[xMid]))
-          
+
         
             ax = plt.subplot(132, projection='3d')
             im = ax.plot_surface(xx, yy,      doseCorr , alpha = 0.5)
          
             ax.set_xlabel("x [mm]")
             ax.set_ylabel("y [mm]")
-           
+
             
             
             ax = plt.subplot(133)
@@ -382,7 +382,7 @@ class Lynx:
         ax.set_xlabel("y [mm]")
         ax.set_ylabel("D")
         ax.set_title("x = {0:.2f}".format(xsc[xMid]))
-        
+
         
         ax = plt.subplot(122)
         pl1 = ax.plot(xsc, data [yMid,:])
@@ -442,8 +442,12 @@ class Lynx:
         tiltX = px[0]*x**3 + px[1]*x**2 + px[2]*x**1 + px[3]
         tiltY = px[0]*x**3 + py[1]*x**2 + py[2]*y**1 + py[3]
         
+        # print(tiltX)
+        
         x0 = x [np.where(np.abs(tiltX -tX) == np.min(np.abs(tiltX -tX)))][0]
         y0 = y [np.where(np.abs(tiltY -tY) == np.min(np.abs(tiltY -tY)))][0]
+        
+        # print(x0)
         
         if plotcurve:
             fig = plt.figure(figsize=(20, 10), dpi=80)
@@ -557,6 +561,10 @@ class Lynx:
                 ax.set_xlabel(o["abscissaLabel"])
                 ax.set_ylabel("$D_{rel}$")
                 ax.set_ylim([0, 1.05])
+                ax.xaxis.label.set_color('white')
+                ax.yaxis.label.set_color('white')
+                ax.tick_params(axis='x', colors='white')
+                ax.tick_params(axis='y', colors='white')
                 #plt.legend(loc = 0)
             i += 1
         if showPlot and plot:
@@ -568,6 +576,8 @@ class Lynx:
         print ("Correction of second scatterer:")
         print ("    x: {0:.3f} mm".format(corX))
         print ("    y: {0:.3f} mm".format(corY))
+        # print(out)
+        
         return corX, corY
             
 

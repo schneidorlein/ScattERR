@@ -11,7 +11,8 @@ Created on Tue Feb  9 21:53:21 2021
 from PyQt5.QtWidgets import QApplication as Qapp
 from PyQt5.QtCore import QCoreApplication
 from PyQt5.QtWidgets import QMainWindow as QMain
-
+from PyQt5 import QtCore
+from PyQt5 import QtGui
 
 pyqt_version = 5
 
@@ -30,9 +31,9 @@ import threading
 import serial
 import configparser
 import glob
+import ctypes
+import re
 
-
-#from Backend.Utils import MotorControl
 from Backend.lynxReaderMalte import Lynx
 
 import PyQt5.QtWidgets as QtWidgets
@@ -157,7 +158,7 @@ class MotorControl(object):
         the motor
         """
 
-        port = 'COM3'
+        port = 'COM6'
         self.InitializeCOM(port)
 
 
@@ -184,7 +185,7 @@ class MotorControl(object):
         Hint = QMessage()
         Hint.setIcon(QMessage.Information)
         Hint.setStandardButtons(QMessage.Ok)
-        Hint.setText("Kalibrierung wird jetzt durchgeführt!")
+        Hint.setText("Calibration starts now!")
         proceed = Hint.exec_()
 
         # Execute Calib
@@ -374,8 +375,9 @@ class MotorControl(object):
         
     def get_tablestatus(self):
         
-            
-        t = threading.Timer(.5, self.get_tablestatus)
+        GUI.enable_buttons(False)
+        
+        t = threading.Timer(1, self.get_tablestatus)
         t.start()
             
         MID = 1
@@ -386,34 +388,19 @@ class MotorControl(object):
         self.SState3 = self.serial_query(SID3, 1, 'ASTAT')[0]
             
             
+            
         #if self.MState == 'T' or self.SState2 == 'T' or self.SState3 == 'T':
         cur_pos = self.get_Position()
+        
         GUI.edit_s1_cur_x.setText('{:4.2f}'.format(cur_pos[1])) #s1h
         GUI.edit_s2_cur_x.setText('{:4.2f}'.format(cur_pos[0]))
         GUI.edit_s2_cur_y.setText('{:4.2f}'.format(cur_pos[2]))
-        
-        if self.MState == 'T' or self.SState2 == 'T' or self.SState3 == 'T':
-            GUI.button_s1_beam.setStyleSheet("color: rgb(255,0,0);")
-            GUI.button_s2_beam.setStyleSheet("color: rgb(255,0,0);")
-            GUI.button_s1_park.setStyleSheet("color: rgb(255,0,0);")
-            GUI.button_s2_park.setStyleSheet("color: rgb(255,0,0);")
-            GUI.button_s2_adjust.setStyleSheet("color: rgb(255,0,0);")
-            GUI.button_in_vitro.setStyleSheet("color: rgb(255,0,0);")
-            GUI.button_in_vivo.setStyleSheet("color: rgb(255,0,0);")
-        
+                
         
         if self.MState == 'R' and self.SState2 == 'R' and self.SState3 == 'R':
             #print('motor stopped')
             t.cancel()
-            
-            GUI.button_s1_beam.setStyleSheet("color: rgb(0,255,0);")
-            GUI.button_s2_beam.setStyleSheet("color: rgb(0,255,0);")
-            GUI.button_s1_park.setStyleSheet("color: rgb(0,255,0);")
-            GUI.button_s2_park.setStyleSheet("color: rgb(0,255,0);")
-            GUI.button_s2_adjust.setStyleSheet("color: rgb(0,255,0);")
-            GUI.button_in_vitro.setStyleSheet("color: rgb(0,255,0);")
-            GUI.button_in_vivo.setStyleSheet("color: rgb(0,255,0);")
-        
+            GUI.enable_buttons(True)
             
 
 
@@ -433,12 +420,23 @@ class MainWindow(QMain, Ui_MainWindow):
         self.corr = []
         #Initialize GUI and load stylesheet
         self.setupUi(self)
+
+        # park and beam buttons
+        # Set up Combo box for positioning mode and connect
+          
+        self.CBoxPARKBEAM_s1.addItem('PARK')
+        self.CBoxPARKBEAM_s1.addItem('BEAM')
+    
+        self.CBoxPARKBEAM_s1.currentIndexChanged.connect(self.parkposition_s1)
+        self.CBoxPARKBEAM_s1.currentIndexChanged.connect(self.beamposition_s1)
         
-        #park and beam buttons
-        self.button_s1_park.clicked.connect(self.parkposition_s1)
-        self.button_s1_beam.clicked.connect(self.beamposition_s1)
-        self.button_s2_park.clicked.connect(self.parkposition_s2)
-        self.button_s2_beam.clicked.connect(self.beamposition_s2)
+        
+        self.CBoxPARKBEAM_s2.addItem('PARK')
+        self.CBoxPARKBEAM_s2.addItem('BEAM')
+        
+        self.CBoxPARKBEAM_s2.currentIndexChanged.connect(self.parkposition_s2)
+        self.CBoxPARKBEAM_s2.currentIndexChanged.connect(self.beamposition_s2)
+        
         #adjust button
         self.button_s2_adjust.clicked.connect(self.adjust_s2)
         
@@ -446,80 +444,110 @@ class MainWindow(QMain, Ui_MainWindow):
         self.button_in_vivo.clicked.connect(self.vivoposition)
         self.button_in_vitro.clicked.connect(self.vitroposition)
         
-        
-        self.button_load_dcm_image.clicked.connect(self.load_Image)
+        # button for manual movement
+        self.Button_MoveTable.clicked.connect(self.manual_move)
 
-        # try:
-        #     a = 1/0
-
-        # except Exception:
-        #     print('youre dumb')
-        #     return 0
+        # button to load dcm image
+        self.button_load_dcm_image.clicked.connect(self.load_Image)      
+        
+    
+    def enable_buttons(self, enable):
+        # disables every button when scatterer is moving and enables when standing still
+        self.CBoxPARKBEAM_s1.setEnabled(enable)
+        self.CBoxPARKBEAM_s2.setEnabled(enable)
+        self.button_s2_adjust.setEnabled(enable)
+        self.button_in_vivo.setEnabled(enable)
+        self.button_in_vitro.setEnabled(enable)
+        self.Button_MoveTable.setEnabled(enable)
+        self.button_load_dcm_image.setEnabled(enable)
         
         
-        
-        
+    
     def parkposition_s1(self):
-        Motor.mode = 'absolute'
-        pos = Motor.get_Position()
-        target = [pos[0], 0, pos[2]]
-        #print target coordinates
-        self.target_coordinates(target)
-        #move table to target destination
-        Motor.moveTable(vector=target)
-        #get current coordinates
-        Motor.get_tablestatus()
         
-        logging.info('\'Park\' button for 1st scatterer pressed. Scatterer is now moving to parking position.')
+        position = GUI.CBoxPARKBEAM_s1.currentText()
+        self.SState2 = Motor.serial_query(2, 1, 'ASTAT')[0]
+        if position == 'PARK':
+            if self.SState2 == 'R':
+                Motor.mode = 'absolute'
+                pos = Motor.get_Position()
+                target = [pos[0], 0, pos[2]]
+                #print target coordinates
+                self.target_coordinates(target)
+                #move table to target destination
+                Motor.moveTable(vector=target)
+                #get current coordinates
+                Motor.get_tablestatus()
+                
+                logging.info('\'Park\' option for 1st scatterer chosen. Scatterer is now moving to parking position. Scatterer position: x_s1 = {} mm,'
+                     'x_s2 = {} mm, y_s2 = {} mm'.format(target[1], target[0], target[2]))
                         
        
 
     def beamposition_s1(self):
         """ 6. nut == 180 mm
         """
-        Motor.mode = 'absolute'
-        pos = Motor.get_Position()
-        target = [pos[0], 30, pos[2]]
-        #print target coordinates
-        self.target_coordinates(target)
-        #move table to target destination
-        Motor.moveTable(vector=target)
-        #get current coordinates
-        Motor.get_tablestatus()
         
-        logging.info('\'Beam\' button for 1st scatterer pressed. Scatterer is now moving to beam position.')
+        position = GUI.CBoxPARKBEAM_s1.currentText()
+        self.SState2 = Motor.serial_query(2, 1, 'ASTAT')[0]
+        if position == 'BEAM':
+             if self.SState2 == 'R':
+                Motor.mode = 'absolute'
+                pos = Motor.get_Position()
+                target = [pos[0], 181, pos[2]]
+                #print target coordinates
+                self.target_coordinates(target)
+                #move table to target destination
+                Motor.moveTable(vector=target)
+                #get current coordinates
+                Motor.get_tablestatus()
+                
+                logging.info('\'Beam\' option for 1st scatterer chosen. Scatterer is now moving to beam position. Scatterer position: x_s1 = {} mm,'
+                     'x_s2 = {} mm, y_s2 = {} mm'.format(target[1], target[0], target[2]))
         
         
         
     def parkposition_s2(self):
-        Motor.mode = 'absolute'
-        pos = Motor.get_Position()
-        target = [0, pos[1], 0]
-        #print target coordinates
-        self.target_coordinates(target)
-        #move table to target destination
-        Motor.moveTable(vector=target)
-        #get current coordinates
-        Motor.get_tablestatus()
-        
-        logging.info('\'Park\' button for 2nd scatterer pressed. Scatterer is now moving to parking position.')
-        
+        position = GUI.CBoxPARKBEAM_s2.currentText()
+        self.MState = Motor.serial_query(1, 1, 'ASTAT')[0]
+        self.SState3 = Motor.serial_query(3, 1, 'ASTAT')[0]
+        if position == 'PARK':
+            if self.MState == 'R' and self.SState3 == 'R':
+                Motor.mode = 'absolute'
+                pos = Motor.get_Position()
+                target = [0, pos[1], 0]
+                #print target coordinates
+                self.target_coordinates(target)
+                #move table to target destination
+                Motor.moveTable(vector=target)
+                #get current coordinates
+                Motor.get_tablestatus()
+                
+                logging.info('\'Park\' option for 2nd scatterer chosen. Scatterer is now moving to parking position. Scatterer position: x_s1 = {} mm,'
+                     'x_s2 = {} mm, y_s2 = {} mm'.format(target[1], target[0], target[2]))
+            
         
     def beamposition_s2(self):
         """ horizontal: 6. nut == 180 mm
         vertical: 6mm
         """
-        Motor.mode = 'absolute'
-        pos = Motor.get_Position()
-        target = [30, pos[1], 6]
-        #print target coordinates
-        self.target_coordinates(target)
-        #move table to target destination
-        Motor.moveTable(vector=target)
-        #get current coordinates
-        Motor.get_tablestatus()
-        
-        logging.info('\'Beam\' button for 2nd scatterer pressed. Scatterer is now moving to beam position.')
+        position = GUI.CBoxPARKBEAM_s2.currentText()
+        self.MState = Motor.serial_query(1, 1, 'ASTAT')[0]
+        self.SState3 = Motor.serial_query(3, 1, 'ASTAT')[0]
+        if position == 'BEAM':
+            if self.MState == 'R' and self.SState3 == 'R':
+                Motor.mode = 'absolute'
+                pos = Motor.get_Position()
+                target = [181, pos[1], 6]
+                #print target coordinates
+                self.target_coordinates(target)
+                #move table to target destination
+                Motor.moveTable(vector=target)
+                #get current coordinates
+                Motor.get_tablestatus()
+                
+                logging.info('\'Beam\' option for 2nd scatterer chosen. Scatterer is now moving to beam position. Scatterer position: x_s1 = {} mm, '
+                     'x_s2 = {} mm, y_s2 = {} mm'.format(target[1], target[0], target[2]))
         
     
     def adjust_s2(self):
@@ -527,19 +555,46 @@ class MainWindow(QMain, Ui_MainWindow):
         pos = Motor.get_Position()
         target = [self.corr[0], 0, self.corr[1]]
         #print target coordinates
-        self.target_coordinates(pos+target)
+        log_target = pos+target
+        self.target_coordinates(log_target)
         #move table to target destination
         Motor.moveTable(vector=target)     
         #get current coordinates
         Motor.get_tablestatus()         
         
-        logging.info('\'Adjust\' button for 2nd scatterer pressed. Moving table by: dx = {:.2f} '
-                             'dy = {:.2f}'.format(self.corr[0], self.corr[1]))
+        logging.info('\'Adjust\' button for 2nd scatterer pressed. Moving table by: dx = {:.2f} mm, '
+                     'dy = {:.2f} mm. Scatterer position: x_s1 = {:.2f} mm, x_s2 = {:.2f} mm, y_s2 = {:.2f} mm'.format(self.corr[0], self.corr[1], log_target[1],
+                     log_target[0], log_target[2]))
+        
+        log_text = self.LogBox.itemAt(0).widget().toPlainText()
+        f= open(self.base+"/logfile.txt","w+")
+        f.write(log_text)
+        f.close() 
     
 
     def vivoposition(self):
+        
         Motor.mode = 'absolute'
         target = [0, 0, 0]
+        #print target coordinates
+        self.target_coordinates(target)
+        #change dropdown button to beam position
+#        GUI.CBoxPARKBEAM_s1.setText('Beam')
+        #move table to target destination
+        Motor.moveTable(vector=target)
+        #get current coordinates
+        Motor.get_tablestatus()
+        
+        logging.info('\'In vivo\' button for both scatterer pressed. Scatterer are now moving to parking position. Scatterer position: x_s1 = {} mm, '
+                     'x_s2 = {} mm, y_s2 = {} mm'.format(target[1], target[0], target[2]))
+        
+        self.CBoxPARKBEAM_s1.setCurrentIndex(0)
+        self.CBoxPARKBEAM_s2.setCurrentIndex(0)
+    
+    def vitroposition(self):
+        
+        Motor.mode = 'absolute'
+        target = [181, 181, 6]
         #print target coordinates
         self.target_coordinates(target)
         #move table to target destination
@@ -547,21 +602,31 @@ class MainWindow(QMain, Ui_MainWindow):
         #get current coordinates
         Motor.get_tablestatus()
         
-        logging.info('\'In vivo\' button for both scatterer pressed. Scatterer are now moving to parking position.')
-        
-    
-    def vitroposition(self):
+        logging.info('\'In vitro\' button for both scatterer pressed. Scatterer are now moving to beam position. Scatterer position: x_s1 = {} mm, '
+                     'x_s2 = {} mm, y_s2 = {} mm'.format(target[1], target[0], target[2]))
+
+        self.CBoxPARKBEAM_s1.setCurrentIndex(1)
+        self.CBoxPARKBEAM_s2.setCurrentIndex(1)
+
+    def manual_move(self):
         Motor.mode = 'absolute'
-        target = [30, 30, 6]
+        target = np.array((GUI.SpinBoxTablex_s2.value(),
+                            GUI.SpinBoxTablex_s1.value(),
+                            GUI.SpinBoxTabley_s2.value()))
         #print target coordinates
         self.target_coordinates(target)
         #move table to target destination
-        Motor.moveTable(vector=[30, 30, 6])
+        Motor.moveTable(vector=target)
         #get current coordinates
         Motor.get_tablestatus()
         
-        logging.info('\'In vitro\' button for both scatterer pressed. Scatterer are now moving to beam position.')
-
+        logging.info('\'Move\' button for both scatterer pressed. Scatterer are now moving to position: x_s1 = {} mm, '
+                     'x_s2 = {} mm, y_s2 = {} mm'.format(target[1], target[0], target[2]))
+        
+        log_text = self.LogBox.itemAt(0).widget().toPlainText()
+        f= open(self.base+"/logfile.txt","w+")
+        f.write(log_text)
+        f.close() 
 
 
     def target_coordinates(self, tar):
@@ -593,19 +658,54 @@ class MainWindow(QMain, Ui_MainWindow):
         self.Display_dcm_image.canvas.axes.imshow(self.Lynxdata.dcmDat.pixel_array)
         #self.Display_dcm_image
         
-        self.Display_dcm_image.canvas.axes.set_xlabel("x [px = 0.5 mm]")
-        self.Display_dcm_image.canvas.axes.set_ylabel("y [px = 0.5 mm]")
+        self.Display_dcm_image.canvas.axes.set_xlabel("x [mm]")
+        self.Display_dcm_image.canvas.axes.set_ylabel("y [mm]", rotation='horizontal')
+        self.Display_dcm_image.canvas.axes.yaxis.set_label_coords(-0.24, 1.1)
         self.Display_dcm_image.canvas.axes.xaxis.label.set_size(18)
         self.Display_dcm_image.canvas.axes.yaxis.label.set_size(18)
-        self.Display_dcm_image.canvas.draw()
+        self.Display_dcm_image.canvas.axes.xaxis.label.set_color('white')
+        self.Display_dcm_image.canvas.axes.yaxis.label.set_color('white')
+        self.Display_dcm_image.canvas.axes.tick_params(axis='x', colors='white')
+        self.Display_dcm_image.canvas.axes.tick_params(axis='y', colors='white')
+        self.Display_dcm_image.canvas.axes.spines['bottom'].set_color('white')
+        self.Display_dcm_image.canvas.axes.spines['top'].set_color('white')
+        self.Display_dcm_image.canvas.axes.spines['right'].set_color('white')
+        self.Display_dcm_image.canvas.axes.spines['left'].set_color('white')
+ 
+        self.Display_dcm_image.canvas.draw()        
         
+        # create ticks for the dcm image with the right units
+        xticks = self.Display_dcm_image.canvas.axes.get_xticks()
+        yticks = self.Display_dcm_image.canvas.axes.get_yticks()
+        
+        xticklabels = [xtick/2 for xtick in xticks]
+        yticklabels = [ytick/2 for ytick in yticks]
+        
+        self.Display_dcm_image.canvas.axes.set_xticklabels(xticklabels)
+        self.Display_dcm_image.canvas.axes.set_yticklabels(yticklabels)
+        
+        self.Display_dcm_image.canvas.draw()
+                
         self.label_dcm_image.setText(fname)
         self.slope()
         
         
         logging.info('Imported Dicom Image: {:s}'.format(fname))
+
+        log_text = self.LogBox.itemAt(0).widget().toPlainText()
+        self.base = os.path.dirname(fname)
+        f= open(self.base+"/logfile.txt","w+")
+        f.write(log_text)
+        f.close() 
         
     def slope(self):
+        
+        #clear dose profiles image when loading the next dcm image
+        self.Display_dose_profile_x.canvas.axes.clear()
+        self.Display_dose_profile_x.canvas.draw()        
+        self.Display_dose_profile_y.canvas.axes.clear()
+        self.Display_dose_profile_y.canvas.draw()
+        
         self.Lynxdata.autodetectRectField()
         
         axes = [self.Display_dose_profile_x.canvas.axes,
@@ -615,10 +715,10 @@ class MainWindow(QMain, Ui_MainWindow):
         
         self.edit_correction_x.setText('{:4.2f}'.format(self.corr[0]))
         self.edit_correction_y.setText('{:4.2f}'.format(self.corr[1]))
-
-                
+        
         self.Display_dose_profile_x.canvas.draw()
         self.Display_dose_profile_y.canvas.draw()
+        
         
 
 
@@ -681,6 +781,11 @@ if __name__=="__main__":
     else:
         pass
     
+    # Create App-ID: Otherwise, the software's icon will not display propperly.
+    appid = 'OncoRay.Preclinical.RadiAiDD'  # for TaskManager
+    ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(appid)
+    app.setWindowIcon(QtGui.QIcon('Backend/icon.jpeg'))
+    
     # create interface        
     GUI = MainWindow()
     GUI.setStyleSheet(open(stylefile, "r").read())
@@ -688,9 +793,9 @@ if __name__=="__main__":
     
     dlg=MyDialog()
     
-    # Motor = MotorControl()
-    # Motor.InitMotor()
-    # Motor.get_tablestatus()
+    Motor = MotorControl()
+    Motor.InitMotor()
+    Motor.get_tablestatus()
     
 
     app.exec()
