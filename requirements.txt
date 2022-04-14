@@ -1,0 +1,10 @@
+numpy
+PyQt5
+threading
+pyserial
+ctypes
+pydicom
+scipy
+matplotlib
+tkinter
+configparser
